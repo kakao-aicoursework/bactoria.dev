@@ -1,9 +1,9 @@
 import json
 import os
 import tkinter as tk
-import tkinter.filedialog as filedialog
 from tkinter import scrolledtext
 
+import chromadb
 import openai
 import pandas as pd
 from dotenv import load_dotenv
@@ -11,34 +11,19 @@ from dotenv import load_dotenv
 load_dotenv()
 openai.api_key = os.environ.get('API_KEY')
 
-
-# response에 CSV 형식이 있는지 확인하고 있으면 저장하기
-def save_to_csv(df):
-    file_path = filedialog.asksaveasfilename(defaultextension='.csv')
-    if file_path:
-        df.to_csv(file_path, sep=';', index=False, lineterminator='\n')
-        return f'파일을 저장했습니다. 저장 경로는 다음과 같습니다. \n {file_path}\n'
-    return '저장을 취소했습니다'
-
-
-def save_playlist_as_csv(playlist_csv):
-    if ";" in playlist_csv:
-        lines = playlist_csv.strip().split("\n")
-        csv_data = []
-
-        for line in lines:
-            if ";" in line:
-                csv_data.append(line.split(";"))
-
-        if len(csv_data) > 0:
-            df = pd.DataFrame(csv_data[1:], columns=csv_data[0])
-            return save_to_csv(df)
-
-    return f'저장에 실패했습니다. \n저장에 실패한 내용은 다음과 같습니다. \n{playlist_csv}'
+collection = chromadb.PersistentClient().get_or_create_collection(
+    name="kakao-services",
+    metadata={"hnsw:space": "cosine"}
+)
 
 
 def reply_function(question):
-    question
+    print("[FUNCTION CALLED] - reply_function")
+    # DB 쿼리
+    collection.query(
+        query_texts=[question],
+        n_results=1,
+    )
 
 
 def send_message(message_log, functions, gpt_model="gpt-3.5-turbo", temperature=0.1):
@@ -51,10 +36,13 @@ def send_message(message_log, functions, gpt_model="gpt-3.5-turbo", temperature=
     )
 
     response_message = response["choices"][0]["message"]
+    print("[RESPONSE MESSAGE]")
+    print(response_message)
+
+    ## FIXME: 아무리 쿼리를 해도 현재 function call 을 타지 않는다. 왜??
 
     if response_message.get("function_call"):  # GPT의 답변이 function_call 인 경우에는 해당 function을 타도록 해준다.
         available_functions = {
-            "save_playlist_as_csv": save_playlist_as_csv,
             "reply_function": reply_function
         }
         function_name = response_message["function_call"]["name"]
@@ -82,6 +70,28 @@ def send_message(message_log, functions, gpt_model="gpt-3.5-turbo", temperature=
 
 
 def main():
+    df = pd.read_csv("카카오톡채널.csv")
+
+    # 데이터 인덱스
+    ids = []
+    # 벡터로 변환 저장할 텍스트 데이터로 ChromaDB에 Embedding 데이터가 없으면 자동으로 벡터로 변환해서 저장
+    documents = []
+
+    for idx in range(len(df)):
+        item = df.iloc[idx]
+        id = item['title'].lower().replace(' ', '-')
+
+        document = f"{item['title']}: {item['content']}"
+
+        ids.append(id)
+        documents.append(document)
+
+    # DB 저장
+    collection.add(
+        documents=documents,
+        ids=ids
+    )
+
     message_log = [
         {
             "role": "system",
@@ -91,23 +101,7 @@ def main():
         }
     ]
 
-    ## TODO: 사용자의 질문을 벡터DB 에서 유사한 단어들로 수정하여 조회한다?
-
     functions = [
-        {
-            "name": "save_playlist_as_csv",
-            "description": "Saves the given playlist data into a CSV file when the user confirms the playlist.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "playlist_csv": {
-                        "type": "string",
-                        "description": "A playlist in CSV format separated by ';'. It must contains a header and the release year should follow the 'YYYY' format. The CSV content must starts with a new line. The header of the CSV file must be in English and it should be formatted as follows: 'Title;Artist;Released'.",
-                    },
-                },
-                "required": ["playlist_csv"],
-            },
-        },
         {
             "name": "reply_function",
             "description": "카카오 질문이 들어오면 질문에 대해 답변합니다.",
@@ -116,7 +110,7 @@ def main():
                 "properties": {
                     "question": {
                         "type": "string",
-                        "description": "Questions about Kakao Services.",
+                        "description": "카카오 채널 관련 정보 중 궁금한 점은 무엇인가요?",
                     },
                 },
                 "required": ["question"],
