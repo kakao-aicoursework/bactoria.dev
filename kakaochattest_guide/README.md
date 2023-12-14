@@ -1,4 +1,9 @@
 # Kakao Chatbot Skill Example (생성 AI의 이해와 LLM 적용 및 실습 - 2)
+
+```bash
+python -m uvicorn main:app --reload --host=0.0.0.0 --port=8080
+```
+
 [카카오 챗봇빌더](https://chatbot.kakao.com/)에 연결할 스킬 서버를 쉽게 개발할 수 있도록 참고할 수 있는 예제입니다. by mario.h
 
 ## Skill
