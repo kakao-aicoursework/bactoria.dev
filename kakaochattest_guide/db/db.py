@@ -103,4 +103,5 @@ def _query_db(collection: Collection, query: str) -> list[str]:
         query_texts=[query],
         n_results=3,
     )
+    print(f"vector search result: {docs['documents'][0]}")
     return docs["documents"][0]

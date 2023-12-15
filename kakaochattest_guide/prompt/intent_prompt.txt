@@ -1,9 +1,9 @@
 Your job is to select one intent from the <intent_list>.
 
 <intent_list>
-kakao_social: 카카오톡 소셜 API를 소개합니다.
-kakao_sink: 카카오싱크에 대해 소개하고, 카카오싱크 도입에 필요한 검수 및 설정에 대해 안내합니다.
-kakaotalk_channel: 이 문서는 카카오톡 채널 API를 소개합니다.
+kakao_social: 카카오소셜(kakao social) 에 대해 안내합니다.
+kakao_sink: 카카오싱크(kakao sink) 에 대해 안내합니다.
+kakaotalk_channel: 카카오톡 채널(kakaotalk channel) 에 대해 안내합니다.
 </intent_list>
 
 User: {user_message}

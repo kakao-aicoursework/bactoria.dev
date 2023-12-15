@@ -11,6 +11,7 @@ from langchain.prompts.chat import (
     HumanMessagePromptTemplate,
 )
 from langchain.schema import SystemMessage
+from langchain_core.prompts import PromptTemplate
 
 from dto import ChatbotRequest
 
@@ -26,6 +27,7 @@ db.db.upload_kakao_social_data()
 db.db.upload_kakao_sink_data()
 db.db.upload_kakaotalk_channel_data()
 
+
 def get_prompt(filename):
     with open("prompt/" + filename, "r") as fin:
         return fin.read()
@@ -36,9 +38,14 @@ system_message_prompt = SystemMessage(content='assistant는 user 가 카카오�
 human = HumanMessagePromptTemplate.from_template('{text}\n---\n 에 대한 답변을 친절하게 대답해줘.')
 prompt = ChatPromptTemplate.from_messages([system_message_prompt, human])
 
-INTENT_PROMPT = get_prompt("intent_prompt.txt")
-FIND_INTENT_CHAIN = LLMChain(llm=llm, prompt=ChatPromptTemplate.from_messages([INTENT_PROMPT]), verbose=True)
-chain = LLMChain(llm=llm, prompt=prompt, verbose=True)
+INTENT_PROMPT = ChatPromptTemplate.from_messages([get_prompt("intent_prompt.txt")])
+GUIDE_PROMPT = PromptTemplate(
+    template=get_prompt("guide_prompt.txt"),
+    input_variables=['related_doc', 'question']
+)
+
+FIND_INTENT_CHAIN = LLMChain(llm=llm, prompt=INTENT_PROMPT, verbose=True)
+GUIDE_CHAIN = LLMChain(llm=llm, prompt=GUIDE_PROMPT, verbose=True)
 
 
 async def callback_handler(request: ChatbotRequest) -> dict:
@@ -48,16 +55,17 @@ async def callback_handler(request: ChatbotRequest) -> dict:
     logger.info("intent: " + intent)
 
     if intent == "kakao_social":
-        related_docs = db.db.query_on_kakao_social(input_text)
+        related_doc = db.db.query_on_kakao_social(input_text)
     elif intent == "kakao_sink":
-        related_docs = db.db.query_on_kakao_sink(input_text)
+        related_doc = db.db.query_on_kakao_sink(input_text)
     elif intent == "kakaotalk_channel":
-        related_docs = db.db.query_on_kakaotalk_channel(input_text)
+        related_doc = db.db.query_on_kakaotalk_channel(input_text)
     else:
-        output_text = "대답할 수 없어요."
+        print("TODO :: 매칭되는 INTENT 없음.")
 
-    print(f"related_docs: {related_docs}")
-    output_text = related_docs
+    output_text = GUIDE_CHAIN.run(related_doc=related_doc, question=input_text)
+
+    print(f"답변: {output_text}")
 
     payload = {
         "version": "2.0",
