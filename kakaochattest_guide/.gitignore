@@ -167,3 +167,5 @@ cython_debug/
 
 # custom
 .env
+/store/chroma-persist
+/chroma
