@@ -75,12 +75,12 @@ async def callback_handler(request: ChatbotRequest) -> dict:
     elif intent == "kakaotalk_channel":
         related_doc = db.db.query_on_kakaotalk_channel(input_text)
     else:
-        print("TODO :: 매칭되는 INTENT 없음.")
+        logger.info("TODO :: 매칭되는 INTENT 없음.")
         related_doc = ""
 
     output_text = GUIDE_CHAIN.run(related_doc=related_doc, question=input_text, context=context)
 
-    print(f"답변: {output_text}")
+    logger.info(f"답변: {output_text}")
 
     history.add_user_message(input_text)
     history.add_ai_message(output_text)
