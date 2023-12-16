@@ -11,6 +11,7 @@ from langchain.prompts.chat import (
     HumanMessagePromptTemplate,
 )
 from langchain.schema import SystemMessage
+from langchain_community.chat_message_histories import FileChatMessageHistory
 from langchain_core.prompts import PromptTemplate
 
 from dto import ChatbotRequest
@@ -51,6 +52,9 @@ GUIDE_CHAIN = LLMChain(llm=llm, prompt=GUIDE_PROMPT, verbose=True)
 async def callback_handler(request: ChatbotRequest) -> dict:
     input_text = request.userRequest.utterance
 
+    file_path = os.path.join("history", "test.json")
+    history = FileChatMessageHistory(file_path)
+
     intent = FIND_INTENT_CHAIN.run(input_text)
     logger.info("intent: " + intent)
 
@@ -66,6 +70,9 @@ async def callback_handler(request: ChatbotRequest) -> dict:
     output_text = GUIDE_CHAIN.run(related_doc=related_doc, question=input_text)
 
     print(f"답변: {output_text}")
+
+    history.add_user_message(input_text)
+    history.add_ai_message(output_text)
 
     payload = {
         "version": "2.0",
