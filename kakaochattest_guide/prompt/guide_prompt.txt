@@ -1,9 +1,13 @@
 Your role is to kindly answer any questions the user may have.
-Please only answer them with information from the documents in <related_documents>.
+Answer them with information from the documents in <related_documents> with <context>.
 
 <related_document>
 {related_doc}
 </related_document>
+
+<context>
+{context}
+</context>
 
 User: {question}
 Answer In Korean:

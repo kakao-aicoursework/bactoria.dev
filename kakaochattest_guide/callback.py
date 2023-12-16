@@ -6,6 +6,7 @@ import aiohttp
 from dotenv import load_dotenv
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
+from langchain.memory import ConversationBufferMemory
 from langchain.prompts.chat import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
@@ -39,10 +40,14 @@ system_message_prompt = SystemMessage(content='assistant는 user 가 카카오�
 human = HumanMessagePromptTemplate.from_template('{text}\n---\n 에 대한 답변을 친절하게 대답해줘.')
 prompt = ChatPromptTemplate.from_messages([system_message_prompt, human])
 
-INTENT_PROMPT = ChatPromptTemplate.from_messages([get_prompt("intent_prompt.txt")])
+INTENT_PROMPT = PromptTemplate(
+    template=get_prompt("intent_prompt.txt"),
+    input_variables=['intent_list', 'context']
+)
+
 GUIDE_PROMPT = PromptTemplate(
     template=get_prompt("guide_prompt.txt"),
-    input_variables=['related_doc', 'question']
+    input_variables=['related_doc', 'question', 'context']
 )
 
 FIND_INTENT_CHAIN = LLMChain(llm=llm, prompt=INTENT_PROMPT, verbose=True)
@@ -54,8 +59,13 @@ async def callback_handler(request: ChatbotRequest) -> dict:
 
     file_path = os.path.join("history", "test.json")
     history = FileChatMessageHistory(file_path)
+    context = ConversationBufferMemory(
+        memory_key="chat_history",
+        input_key="user_message",
+        chat_memory=history,
+    ).buffer
 
-    intent = FIND_INTENT_CHAIN.run(input_text)
+    intent = FIND_INTENT_CHAIN.run(question=input_text, context=context)
     logger.info("intent: " + intent)
 
     if intent == "kakao_social":
@@ -67,7 +77,7 @@ async def callback_handler(request: ChatbotRequest) -> dict:
     else:
         print("TODO :: 매칭되는 INTENT 없음.")
 
-    output_text = GUIDE_CHAIN.run(related_doc=related_doc, question=input_text)
+    output_text = GUIDE_CHAIN.run(related_doc=related_doc, question=input_text, context=context)
 
     print(f"답변: {output_text}")
 
