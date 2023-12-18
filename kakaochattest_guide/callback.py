@@ -40,8 +40,14 @@ GUIDE_PROMPT = PromptTemplate(
     input_variables=['related_doc', 'question', 'context']
 )
 
+INTENT_NOT_FOUND_PROMPT = PromptTemplate(
+    template=get_prompt("intent_not_found_prompt.txt"),
+    input_variables=['question']
+)
+
 FIND_INTENT_CHAIN = LLMChain(llm=llm, prompt=INTENT_PROMPT, verbose=True)
 GUIDE_CHAIN = LLMChain(llm=llm, prompt=GUIDE_PROMPT, verbose=True)
+INTENT_NOT_FOUND_CHAIN = LLMChain(llm=llm, prompt=INTENT_NOT_FOUND_PROMPT, verbose=True)
 
 
 async def callback_handler(request: ChatbotRequest) -> dict:
@@ -61,15 +67,15 @@ async def callback_handler(request: ChatbotRequest) -> dict:
 
     if intent == "kakao_social":
         related_doc = db.db.query_on_kakao_social(input_text)
+        output_text = GUIDE_CHAIN.run(related_doc=related_doc, question=input_text, context=context)
     elif intent == "kakao_sink":
         related_doc = db.db.query_on_kakao_sink(input_text)
+        output_text = GUIDE_CHAIN.run(related_doc=related_doc, question=input_text, context=context)
     elif intent == "kakaotalk_channel":
         related_doc = db.db.query_on_kakaotalk_channel(input_text)
+        output_text = GUIDE_CHAIN.run(related_doc=related_doc, question=input_text, context=context)
     else:
-        logger.info("TODO :: 매칭되는 INTENT 없음.")
-        related_doc = ""
-
-    output_text = GUIDE_CHAIN.run(related_doc=related_doc, question=input_text, context=context)
+        output_text = INTENT_NOT_FOUND_CHAIN.run(question=input_text)
 
     logger.info(f"답변: {output_text}")
 
