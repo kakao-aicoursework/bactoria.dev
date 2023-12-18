@@ -6,7 +6,7 @@ import aiohttp
 from dotenv import load_dotenv
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
+from langchain.memory import ConversationBufferWindowMemory
 from langchain_community.chat_message_histories import FileChatMessageHistory
 from langchain_core.prompts import PromptTemplate
 
@@ -49,7 +49,8 @@ async def callback_handler(request: ChatbotRequest) -> dict:
 
     file_path = os.path.join("history", "test.json")
     history = FileChatMessageHistory(file_path)
-    context = ConversationBufferMemory(
+    context = ConversationBufferWindowMemory(
+        k=3,
         memory_key="chat_history",
         input_key="user_message",
         chat_memory=history,
