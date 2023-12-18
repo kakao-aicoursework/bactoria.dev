@@ -7,23 +7,16 @@ from dotenv import load_dotenv
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
-from langchain.prompts.chat import (
-    ChatPromptTemplate,
-    HumanMessagePromptTemplate,
-)
-from langchain.schema import SystemMessage
 from langchain_community.chat_message_histories import FileChatMessageHistory
 from langchain_core.prompts import PromptTemplate
 
+import db.db
 from dto import ChatbotRequest
 
 load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.environ.get('API_KEY')
 
-SYSTEM_MSG = "당신은 카카오 서비스 제공자입니다."
 logger = logging.getLogger("Callback")
-
-import db.db
 
 db.db.upload_kakao_social_data()
 db.db.upload_kakao_sink_data()
@@ -36,9 +29,6 @@ def get_prompt(filename):
 
 
 llm = ChatOpenAI(temperature=0.1, model='gpt-3.5-turbo-16k')
-system_message_prompt = SystemMessage(content='assistant는 user 가 카카오싱크에 대해 궁금한 부분을 천천히 친절하게 대답해줘.')
-human = HumanMessagePromptTemplate.from_template('{text}\n---\n 에 대한 답변을 친절하게 대답해줘.')
-prompt = ChatPromptTemplate.from_messages([system_message_prompt, human])
 
 INTENT_PROMPT = PromptTemplate(
     template=get_prompt("intent_prompt.txt"),
